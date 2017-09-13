@@ -9,7 +9,7 @@
         "filp/whoops": "^2",
         "doctrine/dbal": "^2"
     },
-    "license": "BSD",
+    "license": "GPL-3.0",
     "authors": [
         {
             "name": "pentagonal",
