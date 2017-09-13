@@ -3,11 +3,10 @@
     "description": "Prima Digital Growth PT.",
     "type": "project",
     "require": {
-        "slim/slim": "^3",
-        "pentagonal/phpass": "^1",
-        "php": ">= 7.1",
-        "filp/whoops": "^2",
-        "doctrine/dbal": "^2"
+        "pentagonalproject/slim-service": "dev-master"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "3.*"
     },
     "license": "GPL-3.0",
     "authors": [

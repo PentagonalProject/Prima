@@ -87,3 +87,10 @@ composer.phar
 # add exclude vendor
 vendor
 
+# Ignore Builtin Config
+/Config.php
+
+# Ignore storage
+/Storage/Logs/*
+!/Storage/Logs/.htaccess
+!/Storage/Cache/.htaccess
