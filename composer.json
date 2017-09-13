@@ -1,0 +1,19 @@
+{
+    "name": "pentagonalproject/prima",
+    "description": "Prima Digital Growth PT.",
+    "type": "project",
+    "require": {
+        "slim/slim": "^3",
+        "pentagonal/phpass": "^1",
+        "php": ">= 7.1",
+        "filp/whoops": "^2",
+        "doctrine/dbal": "^2"
+    },
+    "license": "BSD",
+    "authors": [
+        {
+            "name": "pentagonal",
+            "email": "org@pentagonal.org"
+        }
+    ]
+}
