@@ -9,10 +9,12 @@ use PentagonalProject\Prima\App\Source\Model\User;
  */
 class Auth
 {
+    const AN_HOUR = 3600;
+
     /**
-     * @var
+     * @var User
      */
-    protected $currentUser;
+    protected $user;
 
     /**
      * @var array
@@ -26,15 +28,15 @@ class Auth
      */
     public function __construct(User $user)
     {
-        $this->currentUser = $user;
+        $this->user = $user;
     }
 
     /**
      * @return User
      */
-    public function getCurrentUser() : User
+    public function getUser() : User
     {
-        return $this->currentUser;
+        return $this->user;
     }
 
     /**
@@ -43,9 +45,9 @@ class Auth
     protected function getSessions() : array
     {
         if (!isset($this->sessions)) {
-            $meta = $this->currentUser->createObjectMeta();
+            $meta = $this->user->createObjectMeta();
             $this->sessions = $meta
-                ->getUserMetaValue('session_login', $this->currentUser);
+                ->getUserMetaValue('session_login', $this->user);
             if (!is_array($this->sessions)) {
                 $this->sessions = [];
             }
@@ -83,6 +85,25 @@ class Auth
     }
 
     /**
+     * @param string $token
+     *
+     * @return mixed|null
+     */
+    public function keep(string $token)
+    {
+        $session = $this->get($token);
+        if ($session && $this->isStillValid($session)) {
+            // check if it almost expired
+            if (($session['expiration'] + (self::AN_HOUR * 2)) <= time()) {
+                $session['expiration'] += self::AN_HOUR;
+                $this->update($token, $session);
+            }
+        }
+
+        return $session;
+    }
+
+    /**
      * @param string $name
      *
      * @return mixed|null
@@ -114,23 +135,35 @@ class Auth
      */
     protected function updateSessions($sessions)
     {
-        $meta = $this->currentUser->createObjectMeta();
+        $meta = $this->user->createObjectMeta();
         if (!empty($sessions)) {
             $this->sessions = $sessions;
-            $meta->update('session_login', $sessions, $this->currentUser);
+            $meta->update('session_login', $sessions, $this->user);
         } else {
             $this->sessions = [];
-            $meta->delete('session_login', $this->currentUser);
+            $meta->delete('session_login', $this->user);
         }
     }
 
     /**
      * @param string $verifier
      */
-    protected function destroyOtherSession(string $verifier)
+    public function destroyOtherSession(string $verifier)
     {
         $session = $this->getSession($verifier);
         $this->updateSessions([$verifier => $session]);
+    }
+
+    /**
+     * @param string $verifier
+     */
+    public function destroyCurrentSession(string $verifier)
+    {
+        $session = $this->getSessions();
+        if (isset($session[$verifier])) {
+            unset($session[$verifier]);
+            $this->updateSessions($session);
+        }
     }
 
     /**
@@ -202,7 +235,7 @@ class Auth
 
         // Timestamp
         $session['login'] = time();
-        $token = $this->generateRandom();
+        $token = $this->generateRandom43();
         $this->update($token, $session);
         return $token;
     }
@@ -218,7 +251,7 @@ class Auth
     /**
      * @return string
      */
-    private function generateRandom() : string
+    private function generateRandom43() : string
     {
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $random = '';

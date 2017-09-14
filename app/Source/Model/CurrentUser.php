@@ -12,6 +12,12 @@ use PentagonalProject\SlimService\Database;
  */
 class CurrentUser
 {
+    const AUTH_NAME = 'auth';
+    const LOGGED_NAME = 'logged';
+
+    /**
+     * @var string
+     */
     protected $sessionPrefix = 'prima_';
 
     /**
@@ -45,6 +51,11 @@ class CurrentUser
     private $saltKey;
 
     /**
+     * @var string
+     */
+    private $token;
+
+    /**
      * CurrentUser constructor.
      *
      * @param Database $database
@@ -72,16 +83,26 @@ class CurrentUser
      */
     public function setSessionPrefix(string $cookieSelector)
     {
-        $this->sessionPrefix = $cookieSelector;
+        $this->sessionPrefix = preg_replace('/^[a-z0-9\_\-]/i', '_', $cookieSelector);
     }
 
     /**
+     * Set Auth Cookie
+     *
      * @param string $userName
      * @param bool $remember
      * @return bool
+     * @throws \RuntimeException
      */
-    public function setAuthCookie(string $userName, $remember = false)
+    public function setAuthCookie(string $userName, $remember = false) : bool
     {
+        if ($this->isLogin()) {
+            throw new \RuntimeException(
+                'User has logged!',
+                E_NOTICE
+            );
+        }
+
         $user = new UserDB($this->db);
         $user = $user->getUserByUserName($userName);
         if (!$user) {
@@ -90,53 +111,41 @@ class CurrentUser
         $expiration = time() + (($remember ? 14 : 2 ) * 3600 * 24);
         $expire = $remember ? $expiration + (12 * 3600) : 0;
 
-        $auth = new Auth($user);
-        $token = $auth->create($expiration);
-        $cookieAuth  = $this->generateAuthCookie(
-            $user,
-            $expiration,
-            'auth',
-            $token
-        );
-        $cookieLogin  = $this->generateAuthCookie(
-            $user,
-            $expiration,
-            'logged',
-            $token
-        );
-        $this->cookie->setCookie(
-            $this->getAuthCookieName(),
-            $cookieAuth,
-            $expire
-        );
-        $this->cookie->setCookie(
-            $this->getLoggedCookieName(),
-            $cookieLogin,
-            $expire
-        );
+        $this->auth = new Auth($user);
+        $this->token = $this->auth->create($expiration);
 
-        // override
-        if (!$this->isLogin()) {
-            $this->auth = $auth;
-        }
+        $cookieAuth  = $this->generateAuthCookie($user, $expiration, self::AUTH_NAME, $this->token);
+        $cookieLogin  = $this->generateAuthCookie($user, $expiration, self::LOGGED_NAME, $this->token);
+        $this->setCookieToResponse($cookieAuth, $cookieLogin, $expire);
 
         return true;
     }
 
     /**
-     * @return string
+     * Keep The Session
      */
-    public function getAuthCookieName() : string
+    final public function keepSession()
     {
-        return $this->sessionPrefix . 'auth'. $this->suffixHash;
-    }
-
-    /**
-     * @return string
-     */
-    public function getLoggedCookieName() : string
-    {
-        return $this->sessionPrefix . 'logged'. $this->suffixHash;
+        if ($this->isLogin()) {
+            $oldSession = $this->auth->get($this->token);
+            $session   = $this->auth->keep($this->token);
+            if ($oldSession['expiration'] <> $session['expiration']) {
+                $expiration = $session['expiration'];
+                $cookieAuth  = $this->generateAuthCookie(
+                    $this->auth->getUser(),
+                    $expiration,
+                    self::AUTH_NAME,
+                    $this->token
+                );
+                $cookieLogin  = $this->generateAuthCookie(
+                    $this->auth->getUser(),
+                    $expiration,
+                    self::LOGGED_NAME,
+                    $this->token
+                );
+                $this->setCookieToResponse($cookieAuth, $cookieLogin);
+            }
+        }
     }
 
     /**
@@ -144,28 +153,56 @@ class CurrentUser
      */
     final public function init() : CurrentUser
     {
-        $this->initAuth();
+        if ($this->initAuth()) {
+            // keep the session
+            $this->keepSession();
+        }
+
         return $this;
     }
 
-    final private function initAuth()
+    /**
+     * @param User $user
+     * @param int $expiration
+     * @param string $scheme
+     * @param string $token
+     *
+     * @return string
+     */
+    private function generateAuthCookie(User $user, $expiration, $scheme = self::AUTH_NAME, $token = '') : string
     {
-        if ($this->checkCookie('auth')) {
-            $auth = $this->checkCookie('logged');
-            if ($auth) {
-                $this->auth = $auth;
-            }
-        }
-    }
-
-    private function generateAuthCookie(User $user, $expiration, $scheme = 'auth', $token = '')
-    {
-        $salt = $scheme === 'auth' ? $this->saltKey : $this->securityKey;
+        $salt = $scheme === self::AUTH_NAME ? $this->saltKey : $this->securityKey;
         $username = $user[UserDB::COLUMN_USERNAME];
         $fragmentPassword = substr($user[UserDB::COLUMN_PASSWORD], 8, 4);
         $key = $this->makeHash("{$username}|{$fragmentPassword}|{$expiration}|{$token}", $salt);
         $hash = hash_hmac('sha256', "{$username}|{$expiration}|{$token}", $key);
         return $username . '|' . $expiration . '|' . $token . '|' . $hash;
+    }
+
+    /**
+     * @param string $cookieAuth
+     * @param string $cookieLogin
+     * @param int|null $expiration
+     */
+    private function setCookieToResponse(string $cookieAuth, string $cookieLogin, int $expiration = null)
+    {
+        $this->cookie->setCookie($this->getAuthCookieName(), $cookieAuth, $expiration);
+        $this->cookie->setCookie($this->getLoggedCookieName(), $cookieLogin, $expiration);
+    }
+
+    /**
+     * Init check auth
+     * @return bool
+     */
+    final private function initAuth()
+    {
+        if ($this->checkCookie(self::AUTH_NAME) && $this->checkCookie(self::LOGGED_NAME)) {
+            return true;
+        }
+
+        $this->token = null;
+        $this->auth = null;
+        return false;
     }
 
     /**
@@ -205,6 +242,8 @@ class CurrentUser
             return false;
         }
 
+        $this->auth = $manager;
+        $this->token = $token;
         return $manager;
     }
 
@@ -227,7 +266,7 @@ class CurrentUser
     private function parseCookie(string $scheme)
     {
         switch ($scheme) {
-            case 'logged':
+            case self::LOGGED_NAME:
                 $cookie = $this->cookie->get($this->getLoggedCookieName());
                 break;
             default:
@@ -252,7 +291,47 @@ class CurrentUser
      */
     final public function isLogin() : bool
     {
-        return $this->auth instanceof Auth;
+        return $this->token && $this->auth;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSessionPrefix() : string
+    {
+        return $this->sessionPrefix;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAuthCookieName() : string
+    {
+        return $this->sessionPrefix . self::AUTH_NAME . $this->suffixHash;
+    }
+
+    /**
+     * @return string
+     */
+    public function getLoggedCookieName() : string
+    {
+        return $this->sessionPrefix . self::LOGGED_NAME . $this->suffixHash;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getToken()
+    {
+        return $this->token;
+    }
+
+    /**
+     * @return Auth|null
+     */
+    public function getAuth()
+    {
+        return $this->auth;
     }
 
     /**
@@ -260,9 +339,51 @@ class CurrentUser
      */
     final public function getUser()
     {
-        if ($this->isLogin()) {
-            return $this->auth->getCurrentUser();
+        return $this->auth ? $this->auth->getUser() : null;
+    }
+
+    /**
+     * @return bool
+     */
+    final public function destroy() : bool
+    {
+        if ($this->auth) {
+            $this->auth->destroyCurrentSession($this->auth->hash($this->token));
+            // reset
+            $this->token = null;
+            $this->auth = null;
+            return true;
         }
-        return null;
+
+        return false;
+    }
+
+    /**
+     * @return bool
+     */
+    final public function destroyOtherSession() : bool
+    {
+        if ($this->isLogin()) {
+            $this->auth->destroyOtherSession($this->auth->hash($this->token));
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @return bool
+     */
+    final public function destroyAll() : bool
+    {
+        if ($this->auth) {
+            $this->auth->destroyAllSession();
+            // reset
+            $this->token = null;
+            $this->auth = null;
+            return true;
+        }
+
+        return false;
     }
 }

@@ -5,6 +5,7 @@ use PentagonalProject\Prima\App\Source\Model\CurrentUser;
 use PentagonalProject\Prima\App\Source\Model\Token\Auth;
 use PentagonalProject\SlimService\Application;
 use PentagonalProject\SlimService\Config;
+use PentagonalProject\SlimService\Hook;
 use Psr\Container\ContainerInterface;
 use Slim\Http\Request;
 use Slim\Http\Uri;
@@ -41,7 +42,12 @@ $this['user'] = function (ContainerInterface $container) : CurrentUser {
         $key,
         $salt
     );
-
+    /**
+     * @var Hook $hook
+     */
+    $hook = $container['hook'];
+    $prefix = $hook->apply('session.cookie.prefix', $currentUser->getSessionPrefix(), $currentUser);
+    $currentUser->setSessionPrefix($prefix);
     $currentUser->init();
     return $currentUser;
 };
