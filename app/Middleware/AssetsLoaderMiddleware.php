@@ -27,33 +27,33 @@ $this->add(function (ServerRequestInterface $request, ResponseInterface $respons
     $option = $this['option'];
     $extensions = $this['extension'];
 
-    $activeExtensionFromDB = $option->getOrUpdate('active.extensions', []);
-    if (!is_array($activeExtensionFromDB)) {
-        $activeExtensionFromDB = [];
-        $option->update('active.extension', $activeExtensionFromDB);
+    $activeExtensionsFromDB = $option->getOrUpdate('active.extensions', []);
+    if (!is_array($activeExtensionsFromDB)) {
+        $activeExtensionsFromDB = [];
+        $option->update('active.extension', $activeExtensionsFromDB);
     } else {
-        $activeExtensionFromDB2 = $activeExtensionFromDB;
-        $activeExtensionFromDB = [];
+        $activeExtensionFromDB2 = $activeExtensionsFromDB;
+        $activeExtensionsFromDB = [];
         foreach ($activeExtensionFromDB2 as $ext) {
             if (!is_string($ext)) {
                 continue;
             }
             // sanitize
             $ext =  strtolower(trim($ext));
-            $activeExtensionFromDB[$ext] = true;
+            $activeExtensionsFromDB[$ext] = true;
         }
-        $activeExtensionFromDB = array_keys($activeExtensionFromDB);
-        if ($activeExtensionFromDB !== $activeExtensionFromDB2) {
-            $option->update('active.extensions', $activeExtensionFromDB);
+        $activeExtensionsFromDB = array_keys($activeExtensionsFromDB);
+        if ($activeExtensionsFromDB !== $activeExtensionFromDB2) {
+            $option->update('active.extensions', $activeExtensionsFromDB);
         }
 
         unset($activeExtensionFromDB2);
     }
 
     // call hook
-    $hook->call('before.extensions.loaded', [$this], $activeExtensionFromDB);
+    $hook->call('before.extensions.loaded', [$this], $activeExtensionsFromDB);
 
-    $currentHookedExtensions = (array) $hook->apply('active.extension', $activeExtensionFromDB, $this);
+    $currentHookedExtensions = (array) $hook->apply('active.extension', $activeExtensionsFromDB, $this);
 
     /**
      * @var \Throwable[] $invalidHookedExtensions
@@ -78,6 +78,7 @@ $this->add(function (ServerRequestInterface $request, ResponseInterface $respons
             continue;
         }
         try {
+            // load extension
             $ext = $extensions->load($extension);
             $currentLoadedExtensions[$ext->getModularNameSelector()] = $ext;
         } catch (\Throwable $e) {
@@ -91,7 +92,7 @@ $this->add(function (ServerRequestInterface $request, ResponseInterface $respons
             [$this], // object container
             $currentHookedExtensions,   // active extension hook
             $invalidHookedExtensions,   // invalid extension from database
-            $activeExtensionFromDB,     // Original Extensions from database
+            $activeExtensionsFromDB,     // Original Extensions from database
             $currentLoadedExtensions    // extension loaded
         );
 

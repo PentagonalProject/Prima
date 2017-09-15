@@ -63,16 +63,16 @@ class Example extends Extension
 
     /**
      * @param ContainerInterface $container
-     * @param array $currentHookedExtension
-     * @param array $invalidExtension
-     * @param array $originalExtensionFromDatabase
-     * @param array $currentLoadedExtensions
+     * @param array $currentHookedExtensions
+     * @param array $invalidExtensions
+     * @param array $originalExtensionsFromDatabase
+     * @param array|Extension[] $currentLoadedExtensions
      */
     public function hook(
         ContainerInterface $container,
-        array $currentHookedExtension,
-        array $invalidExtension,
-        array $originalExtensionFromDatabase,
+        array $currentHookedExtensions,
+        array $invalidExtensions,
+        array $originalExtensionsFromDatabase,
         array $currentLoadedExtensions
     ) {
         // do process after all extensions loaded
