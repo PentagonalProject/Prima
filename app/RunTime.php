@@ -81,6 +81,12 @@ $hook->add('response', function (ResponseInterface $response, $app) {
         $cookie   = $app['cookie'];
         $response = $response->withAddedHeader('Set-Cookie', $cookie->toHeaders());
     }
+    /**
+     * @var  Hook $hook
+     */
+    $hook = $app['hook'];
+    $hook->call('after.response.hook', $response);
+
     return $response;
 }, 10, 2);
 

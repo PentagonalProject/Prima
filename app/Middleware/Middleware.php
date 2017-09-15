@@ -10,3 +10,4 @@ if (!isset($this) || ! $this instanceof Application) {
 # Required Middleware
 $this->required(__DIR__ . '/ParsedBodyMiddleware.php');
 $this->required(__DIR__ . '/ErrorHandlerMiddleware.php');
+$this->required(__DIR__ . '/AssetsLoaderMiddleware.php');
