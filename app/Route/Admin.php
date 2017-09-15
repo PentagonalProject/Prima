@@ -1,53 +1,43 @@
 <?php
 namespace PentagonalProject\Prima\App\Route;
 
-use PentagonalProject\Prima\App\Source\Model\CurrentUser;
+use PentagonalProject\Prima\App\Controller\AdminBase;
 use PentagonalProject\Prima\App\Source\Theme;
 use PentagonalProject\SlimService\Application;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\App;
-use Slim\Http\Response;
+use Slim\Route;
 
 if (!isset($this) || ! $this instanceof Application) {
     return;
 }
 
 // grouping admin
-$this->group('/manage', function () {
-    /**
-     * @var App $this
-     */
-    $this->any('[/]', function (ServerRequestInterface $request, ResponseInterface $response) {
+return $this
+    # add grouping
+    ->group(AdminBase::GROUP_PATTERN, function () {
         /**
-         * @var CurrentUser[] $this
-         * @var Response $response
+         * @var App $this
          */
-        if (!$this['user']->isLogin()) {
-            return $response->withRedirect('/manage/login');
-        }
+        AdminBase::route($this, AdminBase::ANY, '[/]', 'index');
+        AdminBase::route($this, AdminBase::ANY, AdminBase::LOGIN_PATH. '[/]', 'login');
+        AdminBase::route($this, AdminBase::ANY, AdminBase::LOGOUT_PATH. '[/]', 'logout');
+    })
+    # add middleware after route match
+    ->add(function (ServerRequestInterface $request, ResponseInterface $response, Route $next) {
+        # unset Route if exists
+        unset($this['route']);
         /**
-         * @var Theme $theme
+         * Assert Route
+         * @var Theme[] $this
+         * @return Route
          */
-        $theme = $this['theme.admin'];
-        $theme['title'] = 'Dashboard';
-        $theme->onceResponse('index', $response);
-        return $response;
-    })->setName('admin.dashboard');
-    $this->any('/login[/]', function (ServerRequestInterface $request, ResponseInterface $response) {
-            /**
-             * @var CurrentUser[] $this
-             * @var Response $response
-             */
-        if ($this['user']->isLogin()) {
-            return $response->withRedirect('/manage');
-        }
-            /**
-             * @var Theme $theme
-             */
-            $theme = $this['theme.admin'];
-            $theme['title'] = 'Login To Member Area';
-            $theme->onceResponse('index', $response);
-            return $response;
-    })->setName('admin.login');
-});
+        $this['route'] = function () use ($next) {
+            return $next;
+        };
+        $this['theme.admin']->setRouteParams($next->getArguments());
+        // include init if exists
+        $this['theme.admin']->onceIgnore('init');
+        return $next($request, $response);
+    });

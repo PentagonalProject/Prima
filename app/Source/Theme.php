@@ -13,6 +13,27 @@ class Theme extends ThemeService implements \ArrayAccess
     const PREFIX_PROPERTY = PropertyHookAble::PREFIX;
 
     /**
+     * @var array
+     */
+    protected $routeParams = [];
+
+    /**
+     * @param array $params
+     */
+    public function setRouteParams(array $params)
+    {
+        $this->routeParams = $params;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRouteParams() : array
+    {
+        return $this->routeParams;
+    }
+
+    /**
      * @param mixed $offset
      *
      * @return bool

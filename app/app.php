@@ -30,16 +30,17 @@ if (!is_array($config)) {
 $vendor = require __DIR__ . '/../vendor/autoload.php';
 $app    = new Application($config, 'default');
 
+# Register App Source & Controller
+$vendor->addPsr4(__NAMESPACE__ . '\\Source\\', __DIR__ .'/Source/');
+$vendor->addPsr4(__NAMESPACE__ . '\\Controller\\', __DIR__ .'/Controller/');
+$vendor->register();
+
 # Require Dependencies
 $app->requires([
     __DIR__ .'/Container/Container.php',
     __DIR__ .'/Middleware/Middleware.php',
     __DIR__ .'/Route/Route.php',
 ]);
-
-# Register App Source
-$vendor->addPsr4(__NAMESPACE__ . '\\Source\\', __DIR__ .'/Source/');
-$vendor->register();
 
 /**
  * @return ClassLoader
