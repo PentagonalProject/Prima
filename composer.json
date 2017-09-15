@@ -3,7 +3,9 @@
     "description": "Prima Digital Growth PT.",
     "type": "project",
     "require": {
-        "pentagonalproject/slim-service": "dev-master"
+        "php": ">= 7.0",
+        "pentagonalproject/slim-service": "dev-master",
+        "spatie/menu": "^2"
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "3.*"
