@@ -11,7 +11,7 @@ use Psr\Http\Message\ResponseInterface;
 /**
  * @var Application $app
  */
-$app = require __DIR__ .'/../app/app.php';
+$app = require __DIR__ .'/../app/App.php';
 /**
  * @var ResponseInterface $response
  */
