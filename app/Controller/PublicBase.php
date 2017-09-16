@@ -1,8 +1,33 @@
 <?php
+/**
+ * MIT License
+ *
+ * Copyright (c) 2017, Pentagonal
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NON INFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+declare(strict_types=1);
+
 namespace PentagonalProject\Prima\App\Controller;
 
 use PentagonalProject\Prima\App\Source\Model\BaseController;
-use PentagonalProject\Prima\App\Source\Model\Option;
 use PentagonalProject\SlimService\Hook;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -13,16 +38,32 @@ use Psr\Http\Message\ServerRequestInterface;
  */
 class PublicBase extends BaseController
 {
-    const THEME_CONTAINER =  'theme';
-    const PREFIX_NAME = 'public';
-    const GROUP_PATTERN = '';
+    /*! ------------------------------------------
+     * Base Constant Property
+     * -------------------------------------------
+     */
+    const PREFIX_NAME       = 'public'; # prefix for route naming
+    const THEME_CONTAINER   = 'theme';  # override theme for view
+
+    /*! ------------------------------------------
+     * Object Route Constant
+     * -------------------------------------------
+     */
+    const GROUP_PATTERN     = '';       # pattern for group
+
+    /**
+     * @var string
+     */
+    protected $adminPath = AdminBase::GROUP_PATTERN;
 
     /**
      * Initial
      */
     protected function init()
     {
-        // init
+        $this->loginPath  = $this->adminPath . AdminBase::LOGIN_PATH;
+        $this->logoutPath = $this->adminPath . AdminBase::LOGOUT_PATH;
+        $this->resetIs();
     }
 
     /**
@@ -35,20 +76,17 @@ class PublicBase extends BaseController
         ServerRequestInterface $request,
         ResponseInterface $response
     ) : ResponseInterface {
+
         /**
          * @var Hook $hook
-         * @var Option $option
          */
         $hook = $this->container['hook'];
-        $option = $this->container['option'];
-        $defaultTitle = 'Welcome To Our Site';
-        $title = $option->getOrUpdate('site.title', $defaultTitle);
-        if (!is_string($title)) {
-            $title = $defaultTitle;
-            $option->update('site.title', $title);
-        }
+        $title = (string) $hook
+            ->apply(
+                HOOK_DEFAULT_TITLE,
+                $this->getOrUpdateDefaultOption('site.title', 'Welcome To Our Site')
+            );
 
-        $title = $hook->apply('default.title', $title);
         return $this->render($request, $response, 'index', $title);
     }
 }

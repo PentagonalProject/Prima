@@ -1,6 +1,33 @@
 <?php
+/**
+ * MIT License
+ *
+ * Copyright (c) 2017, Pentagonal
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NON INFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+declare(strict_types=1);
+
 namespace PentagonalProject\Prima\App\Container;
 
+use Monolog\Logger;
 use PentagonalProject\Prima\App\Source\ExtensionCollection;
 use PentagonalProject\Prima\App\Source\ExtensionParser;
 use PentagonalProject\SlimService\Application;
@@ -11,6 +38,11 @@ if (!isset($this) || ! $this instanceof Application) {
     return;
 }
 
+/*! ------------------------------------------
+ * Extension Container
+ * -------------------------------------------
+ */
+
 /**
  * @param ContainerInterface $container
  *
@@ -19,15 +51,21 @@ if (!isset($this) || ! $this instanceof Application) {
 $this['extension'] = function (ContainerInterface $container) : ExtensionCollection {
     $extensionsDir = dirname($_SERVER['SCRIPT_FILENAME']) . DIRECTORY_SEPARATOR . 'extensions';
     /**
-     * @var Hook $hook
+     * @var Logger[]|Hook[] $container
      */
-    $hook = $container['hook'];
-    $extensionsDir = $hook->apply('extensions.dir', $extensionsDir);
+    # hook
+    $container['hook']->call(HOOK_BEFORE_LOAD_EXTENSION, $container, $extensionsDir);
+
+    $extensionsDir = $container['hook']->apply(HOOK_DIRECTORY_EXTENSIONS, $extensionsDir);
     $extension = new ExtensionCollection(
         $extensionsDir,
         new ExtensionParser($container)
     );
 
     $extension->scan();
+    $container['log']->debug('Extension object Scanned');
+
+    # hook
+    $container['hook']->call(HOOK_AFTER_LOAD_EXTENSION, $container, $extension);
     return $extension;
 };

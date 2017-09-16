@@ -1,4 +1,30 @@
 <?php
+/**
+ * MIT License
+ *
+ * Copyright (c) 2017, Pentagonal
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NON INFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+declare(strict_types=1);
+
 namespace PentagonalProject\Prima\App\Middleware;
 
 use PentagonalProject\Prima\App\Source\Extension;
@@ -14,8 +40,9 @@ if (!isset($this) || ! $this instanceof Application) {
     return;
 }
 
-/**
- * Handler Asset to load
+/*! ------------------------------------------
+ * Middleware to handle asset
+ * -------------------------------------------
  */
 $this->add(function (ServerRequestInterface $request, ResponseInterface $response, $next) {
     /**
@@ -30,7 +57,7 @@ $this->add(function (ServerRequestInterface $request, ResponseInterface $respons
     $activeExtensionsFromDB = $option->getOrUpdate('active.extensions', []);
     if (!is_array($activeExtensionsFromDB)) {
         $activeExtensionsFromDB = [];
-        $option->update('active.extension', $activeExtensionsFromDB);
+        $option->update('active.extensions', $activeExtensionsFromDB);
     } else {
         $activeExtensionFromDB2 = $activeExtensionsFromDB;
         $activeExtensionsFromDB = [];
@@ -51,9 +78,9 @@ $this->add(function (ServerRequestInterface $request, ResponseInterface $respons
     }
 
     // call hook
-    $hook->call('before.extensions.loaded', [$this], $activeExtensionsFromDB);
+    $hook->call(HOOK_BEFORE_ACTIVE_EXTENSIONS, $this, $activeExtensionsFromDB);
 
-    $currentHookedExtensions = (array) $hook->apply('active.extension', $activeExtensionsFromDB, $this);
+    $currentHookedExtensions = (array) $hook->apply(HOOK_ACTIVE_EXTENSIONS, $activeExtensionsFromDB, $this);
 
     /**
      * @var \Throwable[] $invalidHookedExtensions
@@ -88,8 +115,8 @@ $this->add(function (ServerRequestInterface $request, ResponseInterface $respons
 
     $hook
         ->call(
-            'after.extensions.loaded',
-            [$this], // object container
+            HOOK_AFTER_ACTIVE_EXTENSIONS,
+            $this, // object container
             $currentHookedExtensions,   // active extension hook
             $invalidHookedExtensions,   // invalid extension from database
             $activeExtensionsFromDB,     // Original Extensions from database

@@ -23,45 +23,9 @@
  * SOFTWARE.
  */
 
-declare(strict_types=1);
-
-namespace PentagonalProject\Prima\App\Container;
-
-use Monolog\Logger;
-use PentagonalProject\Prima\App\Source\CookieSession;
-use PentagonalProject\SlimService\Application;
-use PentagonalProject\SlimService\Hook;
-use Psr\Container\ContainerInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Slim\Http\Cookies;
-
-if (!isset($this) || ! $this instanceof Application) {
-    return;
-}
-
-/*! ------------------------------------------
- * Cookie Container
- * -------------------------------------------
- */
-
 /**
- * @param ContainerInterface $container
- *
- * @return CookieSession
+ * @var \PentagonalProject\Prima\App\Source\Theme $this
  */
-$this['cookie'] = function (ContainerInterface $container) : CookieSession {
-    /**
-     * @var ServerRequestInterface[]|Logger[]|Hook[] $container
-     */
-    # hook
-    $container['hook']->call(HOOK_BEFORE_LOAD_COOKIE, $container);
 
-    $cookies = new Cookies($container['request']->getCookieParams());
-    $cookieSession = new CookieSession($cookies);
-    $container['log']->debug('Cookie Object Initiated');
-
-    # hook
-    $container['hook']->call(HOOK_AFTER_LOAD_COOKIE, $container, $cookies);
-
-    return $cookieSession;
-};
+$this->load('header');
+$this->load('footer');

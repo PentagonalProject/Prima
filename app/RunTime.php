@@ -1,4 +1,30 @@
 <?php
+/**
+ * MIT License
+ *
+ * Copyright (c) 2017, Pentagonal
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NON INFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+declare(strict_types=1);
+
 namespace PentagonalProject\Prima\App\Container;
 
 use PentagonalProject\Prima\App\Source\CookieSession;
@@ -17,8 +43,11 @@ if (!isset($this) || ! $this instanceof Application) {
  */
 $hook = $this['hook'];
 
-// hook for themes directory
-$hook->add('themes.dir', function () {
+/*! ------------------------------------------
+ * Hook for Themes Directory
+ * -------------------------------------------
+ */
+$hook->add(HOOK_DIRECTORY_THEMES, function () {
     return dirname($_SERVER['SCRIPT_FILENAME'])
            . DIRECTORY_SEPARATOR
            . 'templates'
@@ -26,8 +55,12 @@ $hook->add('themes.dir', function () {
            . 'public';
 });
 
-// hook for themes directory
-$hook->add('themes.admin.dir', function () {
+
+/*! ------------------------------------------
+ * Hoo for Themes Admin Directory
+ * -------------------------------------------
+ */
+$hook->add(HOOK_DIRECTORY_THEMES_ADMIN, function () {
     return dirname($_SERVER['SCRIPT_FILENAME'])
            . DIRECTORY_SEPARATOR
            . 'templates'
@@ -35,13 +68,21 @@ $hook->add('themes.admin.dir', function () {
            . 'admin';
 });
 
-// hook for extensions directory
-$hook->add('extensions.dir', function () {
+
+/*! ------------------------------------------
+ * Hoo for Extensions Directory
+ * -------------------------------------------
+ */
+$hook->add(HOOK_DIRECTORY_EXTENSIONS, function () {
     return dirname($_SERVER['SCRIPT_FILENAME']) . DIRECTORY_SEPARATOR . 'extensions';
 });
 
-// hook for active theme
-$hook->add('active.theme', function ($activeTheme, $themeCollection, $container) {
+
+/*! ------------------------------------------
+ * Hoo for Active Theme
+ * -------------------------------------------
+ */
+$hook->add(HOOK_ACTIVE_THEME, function ($activeTheme, $themeCollection, $container) {
     /**
      * @var Option $options
      * @var ThemeCollection $themeCollection
@@ -56,8 +97,12 @@ $hook->add('active.theme', function ($activeTheme, $themeCollection, $container)
     return $activeTheme;
 }, 10, 3);
 
-// hook for active theme
-$hook->add('active.admin.theme', function ($activeTheme, $themeCollection, $container) {
+
+/*! ------------------------------------------
+ * Hoo for Active Admin Theme
+ * -------------------------------------------
+ */
+$hook->add(HOOK_ACTIVE_THEME_ADMIN, function ($activeTheme, $themeCollection, $container) {
     /**
      * @var Option $options
      * @var ThemeCollection $themeCollection
@@ -72,8 +117,12 @@ $hook->add('active.admin.theme', function ($activeTheme, $themeCollection, $cont
     return $activeTheme;
 }, 10, 3);
 
-// hook response
-$hook->add('response', function (ResponseInterface $response, $app) {
+
+/*! ------------------------------------------
+ * Hoo for Response
+ * -------------------------------------------
+ */
+$hook->add(HOOK_RESPONSE, function (ResponseInterface $response, $app) {
     if (isset($app['cookie']) && $app['cookie'] instanceof CookieSession) {
         /**
          * @var CookieSession $cookie
@@ -81,11 +130,6 @@ $hook->add('response', function (ResponseInterface $response, $app) {
         $cookie   = $app['cookie'];
         $response = $response->withAddedHeader('Set-Cookie', $cookie->toHeaders());
     }
-    /**
-     * @var  Hook $hook
-     */
-    $hook = $app['hook'];
-    $hook->call('after.response.hook', $response);
 
     return $response;
 }, 10, 2);
