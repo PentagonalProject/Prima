@@ -122,5 +122,8 @@ define('HOOK_ALLOW_FORGOT', 'allow.forgot');
  * -------------------------------------------
  */
 
+define('HOOK_INIT_MIDDLEWARE', 'init.middleware');
+define('HOOK_LAST_MIDDLEWARE', 'last.middleware');
+define('HOOK_GROUP_ROUTE_MIDDLEWARE', 'route.group.middleware');
 define('PREFIX_SESSION_COOKIE', 'prefix.session.cookie');
 define('HOOK_RESPONSE', 'response');

@@ -25,48 +25,26 @@
 
 declare(strict_types=1);
 
-namespace PentagonalProject\Prima\App\Route;
+namespace PentagonalProject\Prima\App\Middleware;
 
-use PentagonalProject\Prima\App\Controller\PublicBase;
-use PentagonalProject\Prima\App\Source\Theme;
 use PentagonalProject\SlimService\Application;
 use PentagonalProject\SlimService\Hook;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Slim\Route;
 
 if (!isset($this) || ! $this instanceof Application) {
     return;
 }
 
 /*! ------------------------------------------
- * Route for public / common
+ * Middleware last
  * -------------------------------------------
  */
-$this
-    # add grouping
-    ->group(PublicBase::GROUP_PATTERN, function () {
+$this->add(function (ServerRequestInterface $request, ResponseInterface $response, $next) {
+    /**
+     * @var Hook[] $this
+     */
+    $this['hook']->call(HOOK_LAST_MIDDLEWARE, $this, $request, $response);
 
-        PublicBase::route($this, PublicBase::ANY, '[/]', 'index');
-    })
-    # add middleware after route match
-    ->add(function (ServerRequestInterface $request, ResponseInterface $response, Route $next) {
-        # unset Route if exists
-        unset($this['route']);
-        /**
-         * Assert Route
-         * @var Theme[]|Hook[] $this
-         * @return Route
-         */
-        $this['route'] = function () use ($next) {
-            return $next;
-        };
-
-        # hook
-        $this['hook']->call(HOOK_GROUP_ROUTE_MIDDLEWARE, $this, $this['route'], 'public');
-
-        $this['theme']->setRouteParams($next->getArguments());
-        // include init if exists
-        $this['theme']->onceIgnore('init');
-        return $next($request, $response);
-    });
+    return $next($request, $response);
+});

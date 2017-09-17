@@ -37,6 +37,8 @@ if (!isset($this) || ! $this instanceof Application) {
  * Require Middleware
  * -------------------------------------------
  */
-$this->required(__DIR__ . '/ParsedBodyMiddleware.php');
-$this->required(__DIR__ . '/ErrorHandlerMiddleware.php');
-$this->required(__DIR__ . '/AssetsLoaderMiddleware.php');
+$this->required(__DIR__ . '/InitMiddleware.php');           # Init on first
+$this->required(__DIR__ . '/ParsedBodyMiddleware.php');     # Parse for body
+$this->required(__DIR__ . '/ErrorHandlerMiddleware.php');   # Handler Error
+$this->required(__DIR__ . '/AssetsLoaderMiddleware.php');   # Load assets
+$this->required(__DIR__ . '/LastMiddleware.php');           # Last middleware

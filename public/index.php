@@ -46,20 +46,14 @@ $response = $app->run(true);
  * Doing hook call
  * -------------------------------------------
  */
-if (isset($app['hook']) && $app['hook'] instanceof Hook) {
-    # hook before hooking response
-    $app['hook']->call(HOOK_BEFORE_RESPONSE_HOOK, $response, $app);
-
-    # hook value for response
-    $response = $app['hook']->apply(HOOK_RESPONSE, $response, $app);
-
-    # hook after hooking response
-    $app['hook']->call(HOOK_AFTER_RESPONSE_HOOK, $response, $app);
-}
-
+# hook before hooking response
+$app['hook']->call(HOOK_BEFORE_RESPONSE_HOOK, $response, $app);
+# hook value for response
+$response = $app['hook']->apply(HOOK_RESPONSE, $response, $app);
+# hook after hooking response
+$app['hook']->call(HOOK_AFTER_RESPONSE_HOOK, $response, $app);
 # output buffering
 $app->respond($response);
-
 # call hook after buffer
 $app['hook']->call(HOOK_AFTER_RESPONSE_BUFFER, $response, $app);
 

@@ -28,9 +28,12 @@ declare(strict_types=1);
 namespace PentagonalProject\Prima\Web\Extension;
 
 use PentagonalProject\Prima\App\Source\Extension;
+use PentagonalProject\SlimService\Application;
 use PentagonalProject\SlimService\Hook;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Slim\Http\Environment;
 
 /**
  * Class Example
@@ -78,11 +81,9 @@ class Example extends Extension
          * @var Hook $hook
          */
         $hook = $this->getContainer()['hook'];
-        $hook->add(HOOK_AFTER_ACTIVE_EXTENSIONS, [$this, 'hook'], 10, 5);
+        $hook->add(HOOK_AFTER_ACTIVE_EXTENSIONS, [$this, 'hookActiveExtensions'], 10, 5);
         // end of application
-        $hook->add(HOOK_AFTER_RESPONSE_HOOK, function (ResponseInterface $response) {
-            // do after end of response
-        }, 10, 1);
+        $hook->add(HOOK_RESPONSE, [$this, 'hookResponse'], 10, 2);
     }
 
     /**
@@ -92,7 +93,7 @@ class Example extends Extension
      * @param array $originalExtensionsFromDatabase
      * @param array|Extension[] $currentLoadedExtensions
      */
-    public function hook(
+    public function hookActiveExtensions(
         ContainerInterface $container,
         array $currentHookedExtensions,
         array $invalidExtensions,
@@ -100,5 +101,25 @@ class Example extends Extension
         array $currentLoadedExtensions
     ) {
         // do process after all extensions loaded
+    }
+
+    /**
+     * At end Response generated time from start to the end
+     *
+     * @param ResponseInterface $response
+     * @param Application $application
+     *
+     * @return ResponseInterface
+     */
+    public function hookResponse(ResponseInterface $response, Application $application)
+    {
+        /**
+         * @var Environment[] $application
+         */
+        $endTime = microtime(true) - $application['environment']['REQUEST_TIME_FLOAT'];
+        $endTimeRound = round($endTime, 8);
+        $body = $response->getBody();
+        $body->write("<!-- Site fully generated on {$endTimeRound} second" . ($endTime > 1 ? 's':'') .' -->');
+        return $response->withBody($body);
     }
 }

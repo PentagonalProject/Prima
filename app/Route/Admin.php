@@ -31,6 +31,7 @@ use PentagonalProject\Prima\App\Controller\Admin\AuthAccount;
 use PentagonalProject\Prima\App\Controller\AdminBase;
 use PentagonalProject\Prima\App\Source\Theme;
 use PentagonalProject\SlimService\Application;
+use PentagonalProject\SlimService\Hook;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\App;
@@ -62,12 +63,16 @@ return $this
         unset($this['route']);
         /**
          * Assert Route
-         * @var Theme[] $this
+         * @var Theme[]|Hook[] $this
          * @return Route
          */
         $this['route'] = function () use ($next) {
             return $next;
         };
+
+        # hook
+        $this['hook']->call(HOOK_GROUP_ROUTE_MIDDLEWARE, $this, $this['route'], 'admin');
+
         $this['theme.admin']->setRouteParams($next->getArguments());
         // include init if exists
         $this['theme.admin']->onceIgnore('init');

@@ -119,7 +119,8 @@ $hook->add(HOOK_ACTIVE_THEME_ADMIN, function ($activeTheme, $themeCollection, $c
 
 
 /*! ------------------------------------------
- * Hoo for Response
+ * Hoo for Response for add the end of
+ * priority and set to 100
  * -------------------------------------------
  */
 $hook->add(HOOK_RESPONSE, function (ResponseInterface $response, $app) {
@@ -130,8 +131,18 @@ $hook->add(HOOK_RESPONSE, function (ResponseInterface $response, $app) {
         $cookie   = $app['cookie'];
         $response = $response->withAddedHeader('Set-Cookie', $cookie->toHeaders());
     }
+    /**
+     * Fix Header Length for added write body
+     */
+    if ($response->hasHeader('Content-Length')) {
+        $bodySize = $response->getBody()->getSize();
+        $headerLength = $response->getHeader('Content-Length')[0];
+        if ($bodySize <> $headerLength) {
+            $response = $response->withHeader('Content-Length', (string) $bodySize);
+        }
+    }
 
     return $response;
-}, 10, 2);
+}, 100, 2);
 
 return $this;
