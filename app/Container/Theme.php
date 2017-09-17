@@ -55,7 +55,7 @@ $this['themes'] =  function (ContainerInterface $container) : ThemeCollection {
     /**
      * @var Logger[]|Hook[] $container
      */
-    $themesDir = dirname($_SERVER['SCRIPT_FILENAME'])
+    $themesDir = WEB_DIR
                  . DIRECTORY_SEPARATOR
                  . 'templates'
                  . DIRECTORY_SEPARATOR
@@ -125,7 +125,7 @@ $this['themes.admin'] =  function (ContainerInterface $container) : ThemeCollect
     /**
      * @var Logger[]|Hook[] $container
      */
-    $themesDir = dirname($_SERVER['SCRIPT_FILENAME'])
+    $themesDir = WEB_DIR
                  . DIRECTORY_SEPARATOR
                  . 'templates'
                  . DIRECTORY_SEPARATOR

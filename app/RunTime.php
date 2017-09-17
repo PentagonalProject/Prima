@@ -48,7 +48,7 @@ $hook = $this['hook'];
  * -------------------------------------------
  */
 $hook->add(HOOK_DIRECTORY_THEMES, function () {
-    return dirname($_SERVER['SCRIPT_FILENAME'])
+    return WEB_DIR
            . DIRECTORY_SEPARATOR
            . 'templates'
            . DIRECTORY_SEPARATOR
@@ -61,7 +61,7 @@ $hook->add(HOOK_DIRECTORY_THEMES, function () {
  * -------------------------------------------
  */
 $hook->add(HOOK_DIRECTORY_THEMES_ADMIN, function () {
-    return dirname($_SERVER['SCRIPT_FILENAME'])
+    return WEB_DIR
            . DIRECTORY_SEPARATOR
            . 'templates'
            . DIRECTORY_SEPARATOR
@@ -74,7 +74,7 @@ $hook->add(HOOK_DIRECTORY_THEMES_ADMIN, function () {
  * -------------------------------------------
  */
 $hook->add(HOOK_DIRECTORY_EXTENSIONS, function () {
-    return dirname($_SERVER['SCRIPT_FILENAME']) . DIRECTORY_SEPARATOR . 'extensions';
+    return WEB_DIR . DIRECTORY_SEPARATOR . 'extensions';
 });
 
 

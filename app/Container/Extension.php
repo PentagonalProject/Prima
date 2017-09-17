@@ -49,7 +49,7 @@ if (!isset($this) || ! $this instanceof Application) {
  * @return ExtensionCollection
  */
 $this['extension'] = function (ContainerInterface $container) : ExtensionCollection {
-    $extensionsDir = dirname($_SERVER['SCRIPT_FILENAME']) . DIRECTORY_SEPARATOR . 'extensions';
+    $extensionsDir = WEB_DIR . DIRECTORY_SEPARATOR . 'extensions';
     /**
      * @var Logger[]|Hook[] $container
      */
