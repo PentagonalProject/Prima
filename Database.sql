@@ -39,7 +39,7 @@ CREATE TABLE `users` (
   `last_name` VARCHAR(64) COLLATE utf8_unicode_ci NOT NULL,
   `username` VARCHAR(64) COLLATE utf8_unicode_ci NOT NULL,
   `email` VARCHAR(255) COLLATE utf8_unicode_ci NOT NULL,
-  `password` VARCHAR(60) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT 'sha1 string PasswordHash - (phpass by openwall)',
+  `password` VARCHAR(60) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT 'md5 string PasswordHash - (phpass by openwall)',
   `private_key` VARCHAR(128) COLLATE utf8_unicode_ci DEFAULT NULL COMMENT  'Private Grant token API',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NULL DEFAULT '1990-01-01 00:00:00' ON UPDATE CURRENT_TIMESTAMP COMMENT 'use `1990-01-01 00:00:00` to prevent error sql time stamp zero value'

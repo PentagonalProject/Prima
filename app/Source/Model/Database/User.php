@@ -98,6 +98,18 @@ class User
     }
 
     /**
+     * Make Password Hashed using md5
+     *
+     * @param string $pass
+     *
+     * @return string
+     */
+    protected function hashPlainPassword(string $pass) : string
+    {
+        return md5($pass);
+    }
+
+    /**
      * @param int $id
      *
      * @return null|SingleUser
@@ -161,7 +173,7 @@ class User
             if ($key == self::COLUMN_PASSWORD) {
                 if (!PasswordHash::isMaybeHash($value)) {
                     if (strlen($value) <> 64 || preg_match('/[^a-f0-9]/', $value)) {
-                        $value = sha1($value);
+                        $value = $this->hashPlainPassword($value);
                     }
                     $this
                         ->createQueryBuilder()
@@ -370,7 +382,7 @@ class User
             if ($key === self::COLUMN_PASSWORD) {
                 $value = !is_string($value) ? serialize($value) : $value;
                 $passHash = new PasswordHash();
-                $data[$key] = $passHash->hash(sha1($value));
+                $data[$key] = $passHash->hash($this->hashPlainPassword($value));
                 continue;
             }
             if ($key === self::COLUMN_EMAIL) {
