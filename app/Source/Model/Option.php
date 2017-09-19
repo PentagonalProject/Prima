@@ -30,14 +30,13 @@ namespace PentagonalProject\Prima\App\Source\Model;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Statement;
 use PentagonalProject\SlimService\Database;
-use PentagonalProject\SlimService\Sanitizer;
 use Slim\Collection;
 
 /**
  * Class Option
  * @package PentagonalProject\Prima\App\Source
  */
-class Option implements \ArrayAccess
+class Option extends BaseDBModel implements \ArrayAccess
 {
     const TABLE_NAME = 'options';
     const OPTION_ID = 'option_id';
@@ -93,7 +92,7 @@ class Option implements \ArrayAccess
             ->setParameter(':autoload', 'yes')
             ->execute();
         foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $value) {
-            $value[self::OPTION_VALUE] = Sanitizer::maybeUnSerialize($value[self::OPTION_VALUE]);
+            $value[self::OPTION_VALUE] = $this->resolveResult($value[self::OPTION_VALUE]);
             $this->options->set($value[self::OPTION_NAME], $value);
         }
         if ($stmt instanceof Statement) {
@@ -110,6 +109,7 @@ class Option implements \ArrayAccess
         if (!is_string($name)) {
             return false;
         }
+
         return $this->getDetail($name, true) !== true;
     }
 
@@ -117,13 +117,15 @@ class Option implements \ArrayAccess
      * @param string $name
      * @param mixed  $default
      * @param bool $autoload
+     * @param bool $force
      * @return mixed
      */
-    public function getOrUpdate($name, $default, $autoload = false)
+    public function getOrUpdate($name, $default, $autoload = false, $force = false)
     {
         if ($this->has($name)) {
-            return self::get($name);
+            return $this->get($name, $default, $force);
         }
+
         $this->update($name, $default, $autoload);
         return $default;
     }
@@ -131,29 +133,28 @@ class Option implements \ArrayAccess
     /**
      * @param string $name
      * @param mixed $default
+     * @param bool $force
      * @return mixed
      */
-    public function get($name, $default = null)
+    public function get($name, $default = null, $force = false)
     {
-        if ($this->has($name)) {
-            return $this->getDetail($name)[self::OPTION_VALUE];
-        }
-
-        return $default;
+        $retVal = $this->getDetail($name, [self::OPTION_VALUE => $default], $force);
+        return $retVal[self::OPTION_VALUE];
     }
 
     /**
      * @param string $name
      * @param mixed  $default
+     * @param bool  $force
      * @return mixed|array
      */
-    public function getDetail($name, $default = null)
+    public function getDetail($name, $default = null, $force = false)
     {
         if (!is_string($name)) {
             return null;
         }
 
-        if ($this->options->has($name)) {
+        if (! $force && $this->options->has($name)) {
             if (! is_array($value = $this->options->get($name))) {
                 return $default;
             }
@@ -161,15 +162,19 @@ class Option implements \ArrayAccess
             return $value;
         }
 
-        $retVal = $this->createQueryBuilder()
+        $stmt = $this->createQueryBuilder()
                        ->select('*')
                        ->from($this->table)
                        ->where(self::OPTION_NAME . ' = :paramName')
                        ->setParameter(':paramName', $name)
-                       ->execute()
-                       ->fetch(\PDO::FETCH_ASSOC);
+                       ->execute();
+        $retVal = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if ($stmt instanceof Statement) {
+            $stmt->closeCursor();
+        }
+
         if ($retVal) {
-            $retVal[self::OPTION_VALUE] = Sanitizer::maybeUnSerialize($retVal[self::OPTION_VALUE]);
+            $retVal[self::OPTION_VALUE] = $this->resolveResult($retVal[self::OPTION_VALUE]);
             $this->options->set($name, $retVal);
             return $retVal;
         }
@@ -179,9 +184,24 @@ class Option implements \ArrayAccess
     }
 
     /**
+     * Alias for update
+     *
      * @param string $name
      * @param mixed $value
-     * @param null $autoload
+     * @param bool|int|null|string $autoload
+     * @return bool|int|null
+     */
+    public function set($name, $value, $autoload = null)
+    {
+        return $this->update($name, $value, $autoload);
+    }
+
+    /**
+     * Update or create
+     *
+     * @param string $name
+     * @param mixed $value
+     * @param bool|int|null|string $autoload
      * @return bool|int|null
      */
     public function update($name, $value, $autoload = null)
@@ -189,13 +209,9 @@ class Option implements \ArrayAccess
         if (!is_string($name)) {
             return null;
         }
-
-        $exists = $this->options->has($name);
-        if ($exists) {
-            $exists = is_array($this->options->get($name));
-        } else {
-            $exists = is_array(self::getDetail($name));
-        }
+        // get first
+        $this->getDetail($name);
+        $exists = is_array($this->options->get($name));
 
         $autoload = !$autoload || is_string($autoload) && !in_array(trim(strtolower($autoload)), ['yes', 'y'])
             ?  'no'
@@ -205,11 +221,12 @@ class Option implements \ArrayAccess
             $qb = $this->createQueryBuilder()
                        ->update($this->table)
                        ->set(self::OPTION_VALUE, ':paramValue')
-                       ->setParameter(':paramValue', Sanitizer::maybeSerialize($value));
+                       ->setParameter(':paramValue', $this->resolveSet($value));
             if (is_bool($autoload)) {
                 $qb->set(self::OPTION_AUTOLOAD, ':paramAutoLoad');
                 $qb->setParameter(':paramAutoLoad', $autoload);
             }
+
             $stmt = $qb->where(self::OPTION_NAME . '= :paramName')
                        ->setParameter(':paramName', $name)
                        ->execute();
@@ -236,7 +253,7 @@ class Option implements \ArrayAccess
                    ])->setParameters(
                        [
                        ':paramName' => $name,
-                       ':paramValue' => Sanitizer::maybeSerialize($value),
+                       ':paramValue' => $this->resolveSet($value),
                        ':paramAutoLoad' => $autoload
                        ]
                    );
@@ -285,6 +302,8 @@ class Option implements \ArrayAccess
             if ($stmt instanceof Statement) {
                 $stmt->closeCursor();
             }
+
+            // set for cache
             $this->options->set($name, true);
         }
     }
@@ -302,7 +321,7 @@ class Option implements \ArrayAccess
      */
     public function offsetGet($offset)
     {
-        return $this->getDetail($offset);
+        return $this->get($offset);
     }
 
     /**

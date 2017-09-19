@@ -27,19 +27,19 @@ declare(strict_types=1);
 
 namespace PentagonalProject\Prima\App\Source\Model\Database;
 
+use PentagonalProject\Prima\App\Source\Model\BaseDBModel;
 use PentagonalProject\Prima\App\Source\Model\User as SingleUser;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Statement;
 use Pentagonal\PhPass\PasswordHash;
 use PentagonalProject\SlimService\Database;
-use PentagonalProject\SlimService\Sanitizer;
 use Slim\Collection;
 
 /**
  * Class User
  * @package PentagonalProject\Prima\App\Source\Model\Database
  */
-class User
+class User extends BaseDBModel
 {
     const TABLE_NAME = 'users';
     const COLUMN_ID = 'id';
@@ -63,6 +63,11 @@ class User
     protected $table = self::TABLE_NAME;
 
     /**
+     * @var Collection
+     */
+    protected $collection;
+
+    /**
      * User constructor.
      *
      * @param Database $database
@@ -71,6 +76,7 @@ class User
     {
         $this->db = $database;
         $this->table = $this->db->prefixTables(self::TABLE_NAME);
+        $this->collection = new Collection();
     }
 
     /**
@@ -116,6 +122,14 @@ class User
      */
     public function getUserById(int $id)
     {
+        $keyId = md5($id);
+        if ($this->collection->has($keyId)) {
+            $data = $this->collection[$keyId] ? $this->collection[$this->collection[$keyId]] : null;
+            return is_array($data)
+                ? new SingleUser($data, $this->db)
+                : null;
+        }
+
         $stmt = $this
             ->createQueryBuilder()
             ->select('*')
@@ -130,14 +144,13 @@ class User
         }
 
         if (!is_array($result)) {
-            return null;
+            return $this->collection[$keyId] = null;
         }
 
-        foreach ($result as $key => $value) {
-            $result[$key] = Sanitizer::maybeUnSerialize($value);
-        }
-
-        return new SingleUser($result, $this->db);
+        return $this
+            ->replaceCollectionData(
+                new SingleUser($this->sanitizeForResult($result), $this->db)
+            );
     }
 
     /**
@@ -147,9 +160,17 @@ class User
      */
     public function getUserByEmail(string $email)
     {
-        $email = trim(strtolower($email));
-        if (!$email) {
+        $email = $this->trimmedLower($email);
+        if ($email == '') {
             return null;
+        }
+
+        $keyId = $this->trimmedHash($email);
+        if ($this->collection->has($keyId)) {
+            $data = $this->collection[$keyId] ? $this->collection[$this->collection[$keyId]] : null;
+            return is_array($data)
+                ? new SingleUser($data, $this->db)
+                : null;
         }
 
         $stmt = $this
@@ -166,36 +187,13 @@ class User
         }
 
         if (!is_array($result)) {
-            return null;
+            return $this->collection[$keyId] = null;
         }
 
-        foreach ($result as $key => $value) {
-            if ($key == self::COLUMN_PASSWORD) {
-                if (!PasswordHash::isMaybeHash($value)) {
-                    if (strlen($value) <> 64 || preg_match('/[^a-f0-9]/', $value)) {
-                        $value = $this->hashPlainPassword($value);
-                    }
-                    $this
-                        ->createQueryBuilder()
-                        ->update($this->table)
-                        ->set(self::COLUMN_PASSWORD, ':'.md5(self::COLUMN_PASSWORD))
-                        ->set(self::COLUMN_UPDATED_AT, ':'.md5(self::COLUMN_UPDATED_AT))
-                        ->where(self::COLUMN_ID, ':'. md5(self::COLUMN_ID))
-                        ->setParameters([
-                            ':' . md5(self::COLUMN_PASSWORD) => $value,
-                            ':' . md5(self::COLUMN_UPDATED_AT) => $result[self::COLUMN_UPDATED_AT],
-                            ':' . md5(self::COLUMN_ID) => $result[self::COLUMN_ID]
-                        ])->execute();
-                }
-
-                $result[$key] = $value;
-                continue;
-            }
-
-            $result[$key] = Sanitizer::maybeUnSerialize($value);
-        }
-
-        return new SingleUser($result, $this->db);
+        return $this
+            ->replaceCollectionData(
+                new SingleUser($this->sanitizeForResult($result), $this->db)
+            );
     }
 
     /**
@@ -205,9 +203,17 @@ class User
      */
     public function getUserByUserName(string $username)
     {
-        $username = trim(strtolower($username));
-        if (!$username) {
+        $username = $this->trimmedLower($username);
+        if ($username == '') {
             return null;
+        }
+
+        $keyId = $this->trimmedHash($username);
+        if ($this->collection->has($keyId)) {
+            $data = $this->collection[$keyId] ? $this->collection[$this->collection[$keyId]] : null;
+            return is_array($data)
+                ? new SingleUser($data, $this->db)
+                : null;
         }
 
         $stmt = $this
@@ -223,14 +229,14 @@ class User
             $stmt->closeCursor();
         }
         if (!is_array($result)) {
-            return null;
+            return $this->collection[$keyId] = null;
         }
 
-        foreach ($result as $key => $value) {
-            $result[$key] = Sanitizer::maybeUnSerialize($value);
-        }
-
-        return new SingleUser($result, $this->db);
+        // save to cached data
+        return $this
+            ->replaceCollectionData(
+                new SingleUser($this->sanitizeForResult($result), $this->db)
+            );
     }
 
     /**
@@ -240,7 +246,7 @@ class User
      */
     public function update(SingleUser $user)
     {
-        $collection = $user->getNewCollection();
+        $collection = $user->getCollection();
         $userId = $user[self::COLUMN_ID];
         if (count($collection)  === 0 ||  !is_numeric($userId) || !is_int(abs($userId))) {
             return false;
@@ -260,13 +266,18 @@ class User
             $data[self::COLUMN_UPDATED_AT] = @gmdate('Y-m-d H:i:s');
         }
 
+        $newCollection = $user->getCollection()->all();
         $qb = $this
             ->createQueryBuilder()
             ->update($this->table);
         foreach ($data as $key => $value) {
-            $keys = ':'.md5($key);
-            $qb = $qb->set($key, $keys)->setParameter($keys, $value);
+            $newCollection[$key] = $value;
+            $param = ":{$this->createNameForParam($key)}";
+            $qb = $qb->set($key, $param)->setParameter($param, $value);
         }
+
+        // save to cached data
+        $this->replaceCollectionData($user, $newCollection);
 
          return $qb
              ->where(self::COLUMN_ID .'=:id')
@@ -323,11 +334,12 @@ class User
             ->createQueryBuilder()
             ->insert($this->table);
         foreach ($newData as $key => $value) {
-            $keys = ':'.md5($key);
+            $param = ":{$this->createNameForParam($key)}";
             $qb = $qb
-                ->setValue($key, $keys)
-                ->setParameter($keys, $value);
+                ->setValue($key, $param)
+                ->setParameter($param, $value);
         }
+
         return $qb->execute();
     }
 
@@ -342,10 +354,13 @@ class User
         if (!is_numeric($userId) || !is_int(abs($userId))) {
             return false;
         }
+
         $user = $this->getUserById((int) $userId);
         if (!$user instanceof SingleUser) {
             return false;
         }
+
+        $this->replaceCollectionData($user, null);
 
         return $this
             ->createQueryBuilder()
@@ -353,6 +368,52 @@ class User
             ->where(self::COLUMN_ID .'=:id')
             ->setParameter(':id', $userId)
             ->execute();
+    }
+
+    /**
+     * @param SingleUser $user
+     * @param mixed $value
+     *
+     * @return SingleUser
+     */
+    protected function replaceCollectionData(SingleUser $user, $value = null) : SingleUser
+    {
+        if (func_num_args() < 2) {
+            $value = $user->getCollection()->all();
+        } elseif ($value instanceof SingleUser) {
+            $value = $value->getCollection()->all();
+        }
+
+        // only null & array set cached
+        $value =  is_array($value) ? $value : null;
+        $userId = $this->trimmedHash($user[self::COLUMN_ID]);
+        $this->collection->replace([
+            $userId => $value,
+            $this->trimmedHash($user[self::COLUMN_USERNAME]) => $userId,
+            $this->trimmedHash($user[self::COLUMN_EMAIL]) => $userId,
+        ]);
+
+        return $user;
+    }
+
+    /**
+     * @param string|int $value
+     *
+     * @return string
+     */
+    private function trimmedLower($value) : string
+    {
+        return trim(strtolower($value));
+    }
+
+    /**
+     * @param string|int $value
+     *
+     * @return string
+     */
+    private function trimmedHash($value) : string
+    {
+        return md5($this->trimmedLower($value));
     }
 
     /**
@@ -457,5 +518,47 @@ class User
         }
 
         return $data;
+    }
+
+    /**
+     * @param array $result
+     *
+     * @return array
+     */
+    private function sanitizeForResult(array $result) : array
+    {
+        foreach ($result as $key => $value) {
+            if ($key == self::COLUMN_PASSWORD) {
+                if (!PasswordHash::isMaybeHash($value)) {
+                    if (strlen($value) <> 64 || preg_match('/[^a-f0-9]/', $value)) {
+                        $value = $this->hashPlainPassword($value);
+                    }
+                    $passHash = new PasswordHash();
+                    $value = $passHash->hash($value);
+                    $stmt = $this
+                        ->createQueryBuilder()
+                        ->update($this->table)
+                        ->set(self::COLUMN_PASSWORD, ':pass')
+                        ->set(self::COLUMN_UPDATED_AT, ':update')
+                        ->where(self::COLUMN_ID . '=:id')
+                        ->setParameters([
+                            ':pass'   => $value,
+                            ':update' => $result[self::COLUMN_UPDATED_AT],
+                            ':id'     => $result[self::COLUMN_ID]
+                        ])->execute();
+
+                    if ($stmt instanceof Statement) {
+                        $stmt->closeCursor();
+                    }
+                }
+
+                $result[$key] = $value;
+                continue;
+            }
+
+            $result[$key] = $this->resolveResult($value);
+        }
+
+        return $result;
     }
 }

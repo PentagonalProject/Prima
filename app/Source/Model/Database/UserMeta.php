@@ -29,15 +29,15 @@ namespace PentagonalProject\Prima\App\Source\Model\Database;
 
 use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\Statement;
+use PentagonalProject\Prima\App\Source\Model\BaseDBModel;
 use PentagonalProject\SlimService\Database;
-use PentagonalProject\SlimService\Sanitizer;
 use PentagonalProject\Prima\App\Source\Model\User as SingleUser;
 
 /**
  * Class UserMeta
  * @package PentagonalProject\Prima\App\Source\Model\Database
  */
-class UserMeta
+class UserMeta extends BaseDBModel
 {
     const TABLE_NAME     = 'users_meta';
     const COLUMN_ID      = 'meta_id';
@@ -116,7 +116,7 @@ class UserMeta
         foreach ($result as $key => $res) {
             foreach ($res as $k => $r) {
                 if (strtolower($k) === self::COLUMN_VALUE) {
-                    $res[$k] = Sanitizer::maybeUnSerialize($r);
+                    $res[$k] = $this->resolveResult($r);
                 }
             }
 
@@ -140,7 +140,7 @@ class UserMeta
             return null;
         }
 
-        $value = Sanitizer::maybeSerialize($value);
+        $value = $this->resolveSet($value);
         if (($meta = $this->getUserMeta($name, $user))) {
             return $this
                 ->createQueryBuilder()
@@ -225,7 +225,7 @@ class UserMeta
         }
         foreach ($result as $key => $value) {
             if (strtolower($key) === self::COLUMN_VALUE) {
-                $result[$key] = Sanitizer::maybeUnSerialize($value);
+                $result[$key] = $this->resolveResult($value);
             }
         }
 

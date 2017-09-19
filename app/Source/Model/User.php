@@ -133,9 +133,17 @@ class User implements \ArrayAccess
     /**
      * @return Collection
      */
-    public function getNewCollection() : Collection
+    public function getCollection() : Collection
     {
         return $this->collection;
+    }
+
+    /**
+     * @return Collection
+     */
+    public function getNewCollection() : Collection
+    {
+        return $this->newCollection;
     }
 
     /**
