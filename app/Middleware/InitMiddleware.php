@@ -31,6 +31,8 @@ use PentagonalProject\SlimService\Application;
 use PentagonalProject\SlimService\Hook;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Slim\Http\Environment;
+use Slim\Http\Uri;
 
 if (!isset($this) || ! $this instanceof Application) {
     return;
@@ -41,6 +43,22 @@ if (!isset($this) || ! $this instanceof Application) {
  * -------------------------------------------
  */
 $this->add(function (ServerRequestInterface $request, ResponseInterface $response, $next) {
+
+    /*! ------------------------------------------
+     * Fix Unwanted Index Rewrite
+     * -------------------------------------------
+     */
+    /**
+     * @var Environment $env
+     */
+    $env = $this['environment'];
+    $requestScriptName = $env->get('SCRIPT_NAME');
+    $requestUri = parse_url('http://example.com' . $env->get('REQUEST_URI'), PHP_URL_PATH);
+    if (stripos($requestUri, $requestScriptName) === 0) {
+        $env['SCRIPT_NAME'] = dirname($requestScriptName);
+        $request = $request->withUri(Uri::createFromEnvironment($env));
+    }
+
     /**
      * @var Hook[] $this
      */
