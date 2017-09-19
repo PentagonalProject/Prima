@@ -39,7 +39,6 @@ if (!isset($this) || ! $this instanceof Application) {
  */
 $this->required(__DIR__ . '/Cookie.php');
 $this->required(__DIR__ . '/Db.php');
-$this->required(__DIR__ . '/Db.php');
 $this->required(__DIR__ . '/Environment.php');
 $this->required(__DIR__ . '/ErrorHandler.php');
 $this->required(__DIR__ . '/Extension.php');
